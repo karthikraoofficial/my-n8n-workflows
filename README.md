@@ -1,5 +1,5 @@
 I'm Karthik Rao.
-I build AI agents that I think have useful application in the Indian market context.
+I build AI agents that may have useful application in the Indian market context.
 
 Here are some AI Agent workflows I've built so far:
 
