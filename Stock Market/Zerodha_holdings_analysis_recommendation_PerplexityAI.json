@@ -78,7 +78,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Generate Zerodha Login URL\nconst apiKey = '5r9e4dad1ylh4lwg';\n\nreturn [{\n  json: {\n    loginUrl: `https://kite.trade/connect/login?api_key=${apiKey}&v=3`,\n    message: \"Please visit the URL below to login to Zerodha, then come back and continue the workflow\",\n    apiKey: apiKey\n  }\n}];"
+        "jsCode": "// Generate Zerodha Login URL\nconst apiKey = 'placeholder';\n\nreturn [{\n  json: {\n    loginUrl: `https://kite.trade/connect/login?api_key=${apiKey}&v=3`,\n    message: \"Please visit the URL below to login to Zerodha, then come back and continue the workflow\",\n    apiKey: apiKey\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -174,7 +174,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const crypto = require('crypto');\n\nconst apiKey = '5r9e4dad1ylh4lwg';\nconst apiSecret = 'iky0odvgt9ltn07s6qvm4ud056m0uzu1';\nconst requestToken = $input.first().json.request_token;\n\n// Validate request token\nif (!requestToken || requestToken.length < 10) {\n  throw new Error(`Invalid request token: ${requestToken}. Please provide a valid token from Zerodha authentication.`);\n}\n\n// Generate checksum\nconst checksum = crypto.createHash('sha256')\n  .update(apiKey + requestToken + apiSecret)\n  .digest('hex');\n\nreturn [{\n  json: {\n    api_key: apiKey,\n    request_token: requestToken,\n    checksum: checksum,\n    // For debugging:\n    token_length: requestToken.length,\n    token_prefix: requestToken.substring(0, 5) + '...'\n  }\n}];"
+        "jsCode": "const crypto = require('crypto');\n\nconst apiKey = 'placeholder';\nconst apiSecret = 'placeholder';\nconst requestToken = $input.first().json.request_token;\n\n// Validate request token\nif (!requestToken || requestToken.length < 10) {\n  throw new Error(`Invalid request token: ${requestToken}. Please provide a valid token from Zerodha authentication.`);\n}\n\n// Generate checksum\nconst checksum = crypto.createHash('sha256')\n  .update(apiKey + requestToken + apiSecret)\n  .digest('hex');\n\nreturn [{\n  json: {\n    api_key: apiKey,\n    request_token: requestToken,\n    checksum: checksum,\n    // For debugging:\n    token_length: requestToken.length,\n    token_prefix: requestToken.substring(0, 5) + '...'\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
