@@ -1,0 +1,735 @@
+{
+  "name": "Rock & Metal Music Newsletter",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "094bd21e-1d23-4f06-a286-501045a53c9b",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.article_title }}",
+              "rightValue": "array"
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "3b991d7c-f9af-4042-a21a-0eac9361f995",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1008,
+        576
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Title: {{ $json.article_title }}\nDescription: {{ $json.article_excerpt }}\n\nIs this article related to the genre of rock music or metal music? Return only: true or false\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a classification assistant.\n\nYour role is to analyze the title and description of an article and determine if it is related to the genre of rock or metal. \n\nYou must only return {\"answer\": true} if the article is clearly related to the genre of rock or metal. \n\nIf it is not clearly related, return {\"answer\": false}.\n\nIf you are unable to conclude, your response must be {\"answer\": false}. Make sure that your output is only one of the two JSON options: {\"answer\": true} or {\"answer\": false}. Do not provide explanations."
+        }
+      },
+      "id": "b9f7dfe1-4684-452b-89a3-29c0bb8c8f23",
+      "name": "Agent Classification",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1440,
+        384
+      ],
+      "typeVersion": 1.8
+    },
+    {
+      "parameters": {
+        "sendTo": "kdawg0411@gmail.com",
+        "subject": "Your Rock & Metal News Digest from Karthik Rao",
+        "message": "={{ $json.newsletter_html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "27f6cac3-a454-4b19-aebe-e7f67f65f885",
+      "name": "Send to your mailing list",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        736,
+        960
+      ],
+      "webhookId": "7f81cc6f-3ea8-4f69-a168-6f68ce26b0b6",
+      "notesInFlow": true,
+      "typeVersion": 2.1,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "5HMXrsma2cOijssP",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Helper function to ensure URLs have proper protocol\nfunction ensureHttps(url) {\n    if (!url) return '';\n    if (url.startsWith('http')) return url;\n    return 'https:' + url;\n}\n\n// Helper function to get current date\nfunction getCurrentDate() {\n    const options = { \n        weekday: 'long', \n        year: 'numeric', \n        month: 'long', \n        day: 'numeric' \n    };\n    return new Date().toLocaleDateString('en-US', options);\n}\n\n// Get all input items\nconst allItems = $input.all();\n\n// Filter articles where Rock_News is true\nconst rockArticles = allItems.filter(item => item.json.Rock_News === true);\n\n// Generate article HTML\nlet articlesHTML = '';\n\nif (rockArticles.length === 0) {\n    articlesHTML = `\n        <div style=\"text-align: center; padding: 40px; color: #666;\">\n            <p>No rock news articles available today. Check back tomorrow for fresh updates!</p>\n        </div>\n    `;\n} else {\n    articlesHTML = rockArticles.map((item, index) => {\n        const article = item.json;\n        \n        const imageHTML = article.article_image_url ? `\n            <img src=\"${ensureHttps(article.article_image_url)}\" \n                 alt=\"${article.article_image_alt || article.article_title}\" \n                 class=\"article-image\">\n        ` : '';\n        \n        const dividerHTML = index < rockArticles.length - 1 ? '<div class=\"divider\"></div>' : '';\n        \n        return `\n            <article class=\"article\">\n                ${imageHTML}\n                \n                <h2 class=\"article-title\">\n                    <a href=\"${ensureHttps(article.article_url)}\" target=\"_blank\">\n                        ${article.article_title}\n                    </a>\n                </h2>\n                \n                <p class=\"article-excerpt\">\n                    ${article.article_excerpt}\n                </p>\n                \n                <a href=\"${ensureHttps(article.article_url)}\" \n                   class=\"read-more\" target=\"_blank\">Read Full Story</a>\n            </article>\n            \n            ${dividerHTML}\n        `;\n    }).join('');\n}\n\n// Complete HTML template\nconst newsletterHTML = `\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Karthik Rao's Rock News Daily - Your Daily Fix of Metal & Rock</title>\n    <style>\n        /* Email-safe CSS reset and base styles */\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        \n        body {\n            font-family: Arial, Helvetica, sans-serif;\n            line-height: 1.6;\n            color: #333333;\n            background-color: #f4f4f4;\n            margin: 0;\n            padding: 0;\n            -webkit-text-size-adjust: 100%;\n            -ms-text-size-adjust: 100%;\n        }\n        \n        table {\n            border-collapse: collapse;\n            mso-table-lspace: 0pt;\n            mso-table-rspace: 0pt;\n        }\n        \n        img {\n            border: 0;\n            height: auto;\n            line-height: 100%;\n            outline: none;\n            text-decoration: none;\n            -ms-interpolation-mode: bicubic;\n            max-width: 100%;\n        }\n        \n        .email-container {\n            max-width: 650px;\n            margin: 0 auto;\n            background-color: #ffffff;\n            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);\n        }\n        \n        .header {\n            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);\n            color: #ffffff;\n            padding: 30px 40px;\n            text-align: center;\n            border-top: 4px solid #ff6b35;\n        }\n        \n        .header h1 {\n            font-size: 28px;\n            font-weight: bold;\n            margin-bottom: 8px;\n            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);\n        }\n        \n        .header .tagline {\n            font-size: 14px;\n            color: #cccccc;\n            font-style: italic;\n        }\n        \n        .date-banner {\n            background-color: #ff6b35;\n            color: #ffffff;\n            text-align: center;\n            padding: 12px;\n            font-weight: bold;\n            font-size: 14px;\n            text-transform: uppercase;\n            letter-spacing: 1px;\n        }\n        \n        .content {\n            padding: 30px 40px;\n        }\n        \n        .intro {\n            font-size: 16px;\n            color: #555;\n            margin-bottom: 30px;\n            text-align: center;\n            font-style: italic;\n        }\n        \n        .article {\n            margin-bottom: 40px;\n            border-bottom: 2px solid #f0f0f0;\n            padding-bottom: 30px;\n        }\n        \n        .article:last-child {\n            border-bottom: none;\n            margin-bottom: 0;\n        }\n        \n        .article-image {\n            width: 100%;\n            height: 250px;\n            object-fit: cover;\n            border-radius: 8px;\n            margin-bottom: 20px;\n            transition: transform 0.3s ease;\n        }\n        \n        .article-title {\n            font-size: 22px;\n            font-weight: bold;\n            color: #1a1a1a;\n            margin-bottom: 12px;\n            line-height: 1.3;\n        }\n        \n        .article-title a {\n            color: #1a1a1a;\n            text-decoration: none;\n            transition: color 0.3s ease;\n        }\n        \n        .article-title a:hover {\n            color: #ff6b35;\n        }\n        \n        .article-excerpt {\n            font-size: 15px;\n            color: #666;\n            line-height: 1.6;\n            margin-bottom: 15px;\n        }\n        \n        .read-more {\n            display: inline-block;\n            background-color: #ff6b35;\n            color: #ffffff;\n            padding: 10px 20px;\n            text-decoration: none;\n            border-radius: 5px;\n            font-size: 14px;\n            font-weight: bold;\n            text-transform: uppercase;\n            letter-spacing: 0.5px;\n            transition: background-color 0.3s ease;\n        }\n        \n        .read-more:hover {\n            background-color: #e55a2b;\n        }\n        \n        .divider {\n            height: 1px;\n            background: linear-gradient(to right, transparent, #ddd, transparent);\n            margin: 30px 0;\n        }\n        \n        .footer {\n            background-color: #2d2d2d;\n            color: #cccccc;\n            padding: 30px 40px;\n            text-align: center;\n        }\n        \n        .footer h3 {\n            color: #ff6b35;\n            margin-bottom: 15px;\n            font-size: 18px;\n        }\n        \n        .footer p {\n            font-size: 14px;\n            margin-bottom: 10px;\n        }\n        \n        .social-links {\n            margin: 20px 0;\n        }\n        \n        .social-links a {\n            display: inline-block;\n            margin: 0 10px;\n            color: #ff6b35;\n            text-decoration: none;\n            font-weight: bold;\n        }\n        \n        .unsubscribe {\n            font-size: 12px;\n            color: #999;\n            margin-top: 20px;\n        }\n        \n        .unsubscribe a {\n            color: #ff6b35;\n            text-decoration: none;\n        }\n        \n        /* Mobile responsiveness */\n        @media screen and (max-width: 600px) {\n            .email-container {\n                margin: 0;\n                width: 100% !important;\n            }\n            \n            .header, .content, .footer {\n                padding: 20px !important;\n            }\n            \n            .header h1 {\n                font-size: 24px;\n            }\n            \n            .article-title {\n                font-size: 20px;\n            }\n            \n            .article-image {\n                height: 200px;\n            }\n        }\n    </style>\n</head>\n<body>\n    <div class=\"email-container\">\n        <!-- Header -->\n        <div class=\"header\">\n            <h1>🤘 ROCK NEWS DAILY 🤘</h1>\n            <p class=\"tagline\">Your Daily Fix of Metal & Rock News</p>\n        </div>\n        \n        <!-- Date Banner -->\n        <div class=\"date-banner\">\n            ${getCurrentDate()}\n        </div>\n        \n        <!-- Content -->\n        <div class=\"content\">\n            <p class=\"intro\">\n                Stay connected with the latest happenings in the rock and metal world. Here are today's top stories that are making waves in the community.\n            </p>\n            \n            ${articlesHTML}\n        </div>\n        \n        <!-- Footer -->\n        <div class=\"footer\">\n            <h3>🎸 Rock On! 🎸</h3>\n            <p>Thank you for reading Rock News Daily!</p>\n            <p>Keep the metal spirit alive and stay connected with your favorite artists.</p>\n            \n            <div class=\"social-links\">\n                <a href=\"#\" target=\"_blank\">Facebook</a>\n                <a href=\"#\" target=\"_blank\">Twitter</a>\n                <a href=\"#\" target=\"_blank\">Instagram</a>\n                <a href=\"#\" target=\"_blank\">YouTube</a>\n            </div>\n            \n            <p>🤘 \"Sold My Soul To Rock'n'Roll\" 🤘</p>\n            \n            <div class=\"unsubscribe\">\n                <p>\n                    This email was sent to you because you subscribed to our Rock News Daily newsletter.<br>\n                    <a href=\"#\">Unsubscribe</a> | <a href=\"#\">Update Preferences</a> | <a href=\"#\">View in Browser</a>\n                </p>\n            </div>\n        </div>\n    </div>\n</body>\n</html>\n`;\n\n// Return the result in n8n format\nreturn [{\n    json: {\n        newsletter_html: newsletterHTML,\n        articles_count: rockArticles.length,\n        generation_date: new Date().toISOString()\n    }\n}];"
+      },
+      "id": "af4c6df7-fc83-4ce1-bcf3-85d983858e2d",
+      "name": "Generate Email HTML",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        560,
+        960
+      ],
+      "notesInFlow": true,
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "dataPropertyName": "articles",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "article_title",
+              "cssSelector": "a.title"
+            },
+            {
+              "key": "article_url",
+              "cssSelector": "a.title[href]",
+              "returnValue": "attribute",
+              "attribute": "href"
+            },
+            {
+              "key": "article_excerpt",
+              "cssSelector": ".excerpt"
+            },
+            {
+              "key": "article_image_url",
+              "cssSelector": ".theframe img",
+              "returnValue": "attribute",
+              "attribute": "src"
+            },
+            {
+              "key": "article_image_alt",
+              "cssSelector": "figcaption"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "18eafa79-d47d-4ef8-87d8-c4196944dba2",
+      "name": "Parse Article Blocks",
+      "type": "n8n-nodes-base.html",
+      "position": [
+        784,
+        576
+      ],
+      "notesInFlow": true,
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "articles",
+              "cssSelector": "article",
+              "returnValue": "html",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2176bc25-51ba-4409-840d-27b737b3c36e",
+      "name": "Extract Articles Blocks",
+      "type": "n8n-nodes-base.html",
+      "position": [
+        352,
+        576
+      ],
+      "notesInFlow": true,
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "articles",
+        "options": {}
+      },
+      "id": "16a19ff3-a1c7-43bf-b7ce-41d4ba132c6f",
+      "name": "Split Out by Article Block",
+      "type": "n8n-nodes-base.splitOut",
+      "position": [
+        560,
+        576
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "230a6412-ba36-489f-8e32-6509fcb9b3fa",
+      "name": "Loop Over Articles",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        1232,
+        576
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "mode": "combineBySql"
+      },
+      "id": "b4900496-c84d-4ff6-912a-685b64f669c5",
+      "name": "Merge Article + Flag",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        2048,
+        432
+      ],
+      "notesInFlow": true,
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1gbGuo5YMRNy2ivuvT43jxAVBA27k7oL-VSWWO1eKHS0",
+          "mode": "list",
+          "cachedResultName": "Rock & Metal News",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gbGuo5YMRNy2ivuvT43jxAVBA27k7oL-VSWWO1eKHS0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gbGuo5YMRNy2ivuvT43jxAVBA27k7oL-VSWWO1eKHS0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Rock_News": "={{ $json.Rock_News }}",
+            "article_title": "={{ $json.article_title }}",
+            "article_url": "={{ $json.article_url }}",
+            "article_excerpt": "={{ $json.article_excerpt }}",
+            "article_image_url": "={{ $json.article_image_url }}",
+            "article_image_alt": "={{ $json.article_image_alt }}"
+          },
+          "matchingColumns": [
+            "Rock News"
+          ],
+          "schema": [
+            {
+              "id": "Rock_News",
+              "displayName": "Rock_News",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "article_title",
+              "displayName": "article_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "article_url",
+              "displayName": "article_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "article_excerpt",
+              "displayName": "article_excerpt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "article_image_url",
+              "displayName": "article_image_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "article_image_alt",
+              "displayName": "article_image_alt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "9f8703be-7e67-473b-bbaf-aa7791719efe",
+      "name": "Record Results",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        2272,
+        512
+      ],
+      "notesInFlow": true,
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2SvHRjvyqH6qC7tc",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"answer\": \"boolean | null\"\n}\n"
+      },
+      "id": "c3112ba7-e9d6-4b7b-92ab-845a302010ff",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        1712,
+        560
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "content": "### 1. Workflow Trigger with Cron Job\nThe workflow is triggered every morning at 08:30 am (local time)\n\n#### How to setup?\n- Select the time you want to set it up\n",
+        "height": 680,
+        "width": 220,
+        "color": 7
+      },
+      "id": "dcdea63f-22da-482d-b48d-8291a1a3cabb",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -160,
+        32
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 4. Generate HTML page and send by email\nThis block collects all the articles of the day to create a prettified HTML page that is sent using the Gmail node.\n#### How to setup?\n- **Gmail Node:** set up your Gmail API credentials\n[Learn more about the Gmail Trigger Node]\n",
+        "height": 380,
+        "width": 620,
+        "color": 7
+      },
+      "id": "e0a0df00-1c6a-49ca-a822-8c4a7bda4e67",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        80,
+        752
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 2. Scrapping and Parsing of Articles blocks\nThis starts with the HTTP node collecting HTML code that is parsed to extract Article Titles, Link, Image Cover and Reading time.\n\n#### How to setup?\n*Nothing to do*",
+        "height": 700,
+        "width": 840,
+        "color": 7
+      },
+      "id": "b7e8a82f-91b9-4474-af5b-1603f2cca4cb",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        80,
+        32
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 3. Classifiy all the articles (Sustainability: true or false)\nThis starts with the If node that filters based on the scope date fixed by you. Through the loop, the AI Agent classify the articles using the title and description.\nThe ones that are flagged as \"sustainability\" are recorded in a Google Sheet.\n\n#### How to setup?\n- **Record results in the Google Sheet Node**:\n   1. Add your Google Sheet API credentials to access the Google Sheet file\n   2. Select the file using the list, an URL or an ID\n   3. Select the sheet in which you want to record the articles\n   4. Map the fields: **sustainability, type, date, title, link, description, image, read time**\n  [Learn more about the Google Sheet Node](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlesheets)\n- **AI Agent with the Chat Model**:\n   1. Add a chat model with the required credentials *(Example: Open AI 4o-mini)*",
+        "height": 700,
+        "width": 1440,
+        "color": 7
+      },
+      "id": "12e3f2a5-2913-4cbb-a1e9-a652e860bff2",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1008,
+        32
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-20250514",
+          "cachedResultName": "Claude 4 Sonnet"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1440,
+        544
+      ],
+      "id": "9f7df16d-a0cc-4cd3-8d54-137dbc4b94ba",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "w5v595VAifD7o3Qa",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://loudwire.com/category/news/",
+        "options": {}
+      },
+      "id": "7c15318f-b785-4bb5-8cfb-f5d8e4ffe854",
+      "name": "loudwire news",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        128,
+        576
+      ],
+      "notesInFlow": true,
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "id": "2fb178f5-b1d6-487b-a754-7e8c2989619f",
+      "name": "Trigger at 05:00 pm",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        -96,
+        576
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dcfc8260-1125-4883-8895-8a5f55d09341",
+              "name": "Rock_News",
+              "type": "string",
+              "value": "={{ $json.output.answer }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6c0630d2-dd04-4477-b1a5-ab3e5a5062a5",
+      "name": "Rock News Flag",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1824,
+        384
+      ],
+      "notesInFlow": true,
+      "retryOnFail": false,
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1gbGuo5YMRNy2ivuvT43jxAVBA27k7oL-VSWWO1eKHS0",
+          "mode": "list",
+          "cachedResultName": "Rock & Metal News",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gbGuo5YMRNy2ivuvT43jxAVBA27k7oL-VSWWO1eKHS0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gbGuo5YMRNy2ivuvT43jxAVBA27k7oL-VSWWO1eKHS0/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "de3136bd-468c-402f-bab9-9b02367eef03",
+      "name": "Get Rock News",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        160,
+        960
+      ],
+      "notesInFlow": true,
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2SvHRjvyqH6qC7tc",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "article_title",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        368,
+        960
+      ],
+      "id": "72529bca-7f8d-48fc-9f38-17ee86f101fc",
+      "name": "Remove Duplicates"
+    }
+  ],
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Classification": {
+      "main": [
+        [
+          {
+            "node": "Rock News Flag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Email HTML": {
+      "main": [
+        [
+          {
+            "node": "Send to your mailing list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Article Blocks": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Articles Blocks": {
+      "main": [
+        [
+          {
+            "node": "Split Out by Article Block",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out by Article Block": {
+      "main": [
+        [
+          {
+            "node": "Parse Article Blocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Articles": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Agent Classification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Article + Flag",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Article + Flag": {
+      "main": [
+        [
+          {
+            "node": "Record Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Results": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Agent Classification",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent Classification",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "loudwire news": {
+      "main": [
+        [
+          {
+            "node": "Extract Articles Blocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger at 05:00 pm": {
+      "main": [
+        [
+          {
+            "node": "loudwire news",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Rock News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rock News Flag": {
+      "main": [
+        [
+          {
+            "node": "Merge Article + Flag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Rock News": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Generate Email HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Trigger at 02:30 pm": {
+      "recurrenceRules": []
+    },
+    "node:Trigger at 05:00 pm": {
+      "recurrenceRules": []
+    }
+  },
+  "pinData": {},
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
