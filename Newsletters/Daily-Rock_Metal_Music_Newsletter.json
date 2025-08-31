@@ -55,7 +55,7 @@
     },
     {
       "parameters": {
-        "sendTo": "kdawg0411@gmail.com",
+        "sendTo": "placeholder@gmail.com",
         "subject": "Your Rock & Metal News Digest from Karthik Rao",
         "message": "={{ $json.newsletter_html }}",
         "options": {
