@@ -1,0 +1,529 @@
+{
+  "name": "Zerodha holdings Project V4.2 + Aggressive reco_Perplexity AI working",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.kite.trade/portfolio/holdings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=token {{ $json.api_key }}:{{ $json.access_token }} "
+            },
+            {
+              "name": "X-Kite-Version",
+              "value": "3"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1552,
+        2016
+      ],
+      "id": "1a12832f-04a9-4bc0-9ec1-d803953a2626",
+      "name": "HTTP Request - Kite"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me",
+      "typeVersion": 1,
+      "position": [
+        3120,
+        2088
+      ],
+      "id": "7e26c7fd-2f65-46b2-a8bc-a12d8cdcfe37"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        2224,
+        2016
+      ],
+      "id": "33633c47-77c0-4b93-9b32-fc029265bb87",
+      "name": "Loop Over each stock"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1776,
+        2016
+      ],
+      "id": "85772fd0-4434-417f-8416-f890c2cf3d65",
+      "name": "Split Out - split holdings"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate Zerodha Login URL\nconst apiKey = '5r9e4dad1ylh4lwg';\n\nreturn [{\n  json: {\n    loginUrl: `https://kite.trade/connect/login?api_key=${apiKey}&v=3`,\n    message: \"Please visit the URL below to login to Zerodha, then come back and continue the workflow\",\n    apiKey: apiKey\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        2016
+      ],
+      "id": "7a1afc6f-8d40-4ac8-a975-ef50a89c0dbb",
+      "name": "Code - Login"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Display URL to user\nconst loginUrl = $input.first().json.loginUrl;\n\nreturn [{\n  json: {\n    instructions: \"STEP 1: Click this link to authenticate with Zerodha:\",\n    loginLink: loginUrl,\n    nextStep: \"STEP 2: After logging in, you'll be redirected. Copy the request_token from the URL and enter it below:\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        2016
+      ],
+      "id": "2f5e8485-4a9a-4a77-bc03-7136cf3ed7ba",
+      "name": "Code - auth and request token"
+    },
+    {
+      "parameters": {
+        "resume": "form",
+        "formTitle": "Zerodha Login",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "request_token",
+              "placeholder": "After logging in via the Zerodha link, copy the 'request_token' from the URL and paste it here.",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        656,
+        2016
+      ],
+      "id": "b88356ee-1c74-4fbb-b5fa-81b05c54e4d0",
+      "name": "Wait",
+      "webhookId": "01fab893-408f-45f3-9f07-1018696fb3da"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kite.trade/session/token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            },
+            {
+              "name": "X-Kite-Version",
+              "value": "3"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "api_key",
+              "value": "={{ $json.api_key }}"
+            },
+            {
+              "name": "request_token",
+              "value": "={{ $json.request_token }}"
+            },
+            {
+              "name": "checksum",
+              "value": "={{ $json.checksum }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        2016
+      ],
+      "id": "4bfd4b01-8a69-45db-b148-7c11c0b05cfa",
+      "name": "HTTP Request - Get access token"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\n\nconst apiKey = '5r9e4dad1ylh4lwg';\nconst apiSecret = 'iky0odvgt9ltn07s6qvm4ud056m0uzu1';\nconst requestToken = $input.first().json.request_token;\n\n// Validate request token\nif (!requestToken || requestToken.length < 10) {\n  throw new Error(`Invalid request token: ${requestToken}. Please provide a valid token from Zerodha authentication.`);\n}\n\n// Generate checksum\nconst checksum = crypto.createHash('sha256')\n  .update(apiKey + requestToken + apiSecret)\n  .digest('hex');\n\nreturn [{\n  json: {\n    api_key: apiKey,\n    request_token: requestToken,\n    checksum: checksum,\n    // For debugging:\n    token_length: requestToken.length,\n    token_prefix: requestToken.substring(0, 5) + '...'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        2016
+      ],
+      "id": "c5071f5f-1492-4bcf-80b9-04d568474b0a",
+      "name": "Code - gen checksum"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"access_token\": \"{{ $json.data.access_token }}\",\n  \"refresh_token\": \"{{ $json.data.refresh_token }}\",\n  \"api_key\": \"{{ $json.data.api_key }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        2016
+      ],
+      "id": "96067d28-0c96-405f-8edd-94935467b043",
+      "name": "Set node- store tokens"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate technical indicators from Zerodha portfolio data\nconst holding = $json;\n\n// Price-based indicators\nconst averagePrice = holding.average_price;\nconst lastPrice = holding.last_price;\nconst dayChange = holding.day_change;\nconst dayChangePercentage = holding.day_change_percentage;\nconst pnl = holding.pnl;\n\n// Calculate additional metrics\nconst priceVsAverage = lastPrice - averagePrice;\nconst priceVsAveragePercent = ((lastPrice - averagePrice) / averagePrice) * 100;\nconst unrealizedPnlPercent = (pnl / (averagePrice * Math.abs(holding.quantity))) * 100;\n\n// Trend strength based on multiple factors\nlet trendStrength = \"neutral\";\nif (Math.abs(dayChangePercentage) > 2) trendStrength = \"strong\";\nif (Math.abs(dayChangePercentage) > 5) trendStrength = \"very_strong\";\n\n// Position health score (0-100)\nconst healthScore = Math.max(0, Math.min(100, \n  50 + (priceVsAveragePercent * 2) + (dayChangePercentage * 5)\n));\n\n// Investment timing signal\nlet timingSignal = \"hold\";\nif (priceVsAveragePercent < -10 && dayChangePercentage > 1) timingSignal = \"accumulate\";\nif (priceVsAveragePercent > 20 && dayChangePercentage < -1) timingSignal = \"reduce\";\nif (pnl > 0 && dayChangePercentage < -3) timingSignal = \"profit_booking\";\n\nreturn [{\n  json: {\n    ...holding,\n    technicals: {\n      // Basic metrics\n      current_vs_average: priceVsAverage.toFixed(2),\n      current_vs_average_percent: priceVsAveragePercent.toFixed(2),\n      unrealized_pnl_percent: unrealizedPnlPercent.toFixed(2),\n      \n      // Trend analysis\n      trend_direction: dayChangePercentage >= 0 ? \"bullish\" : \"bearish\",\n      trend_strength: trendStrength,\n      daily_volatility: Math.abs(dayChangePercentage),\n      \n      // Risk assessment\n      health_score: Math.round(healthScore),\n      risk_level: healthScore < 30 ? \"high\" : healthScore < 70 ? \"medium\" : \"low\",\n      \n      // Trading signals\n      timing_signal: timingSignal,\n      support_level: (lastPrice * 0.95).toFixed(2),\n      resistance_level: (lastPrice * 1.05).toFixed(2),\n      \n      // Position analysis\n      is_profitable: pnl > 0,\n      drawdown_from_avg: Math.max(0, priceVsAveragePercent * -1)\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2448,
+        2016
+      ],
+      "id": "3013c989-4ebf-4005-b240-638ae798c68c",
+      "name": "Code - tech indicators calc"
+    },
+    {
+      "parameters": {
+        "formTitle": "Stock Portfolio Analyzer",
+        "formDescription": "Click below to analyze your Zerodha portfolio",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Analyze Portfolio",
+              "fieldType": "checkbox",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Click to start portfolio analysis"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -16,
+        2016
+      ],
+      "id": "9aa05ee5-95c0-413c-a07a-bfb66e1ebb3e",
+      "name": "On form submission",
+      "webhookId": "553fdccd-517d-4ca1-a455-c9b86e619534"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items (your array of analysis objects)\nconst analysisResults = $input.all();\n\n// Check if we have the expected data structure - an array of recommendation objects\nif (!analysisResults || analysisResults.length === 0) {\n  return [{\n    json: {\n      htmlOutput: \"❌ No analysis results received.\",\n      parsedResults: [],\n      summary: \"No stocks analyzed\"\n    }\n  }];\n}\n\n// Check if the first item has the expected structure of parsed recommendations\n// If it already has 'symbol' and 'recommendation', we're good to go\nif (analysisResults[0].json && analysisResults[0].json.symbol) {\n  // Data is already parsed - use it directly\n  const parsedResults = analysisResults.map(item => item.json);\n  \n  // Create formatted text output with HTML line breaks\n  let textResponse = `📊 <strong>PORTFOLIO ANALYSIS RESULTS</strong><br>\n───────────────────────────────────<br>\nAnalyzed: <strong>${parsedResults.length}</strong> stocks<br>\nDate: ${new Date().toLocaleDateString()}<br>\n───────────────────────────────────<br><br>`;\n\n  parsedResults.forEach((result) => {\n    const emoji = result.recommendation === 'BUY' ? '✅' : \n                 result.recommendation === 'SELL' ? '❌' : '⏸️';\n    \n    textResponse += `${emoji} <strong>${result.symbol}</strong> - ${result.recommendation} (${result.confidence})<br>\n───────────────────────────────────<br>\n${result.reason}<br><br>`;\n  });\n\n  // Add summary\n  const buyCount = parsedResults.filter(r => r.recommendation === 'BUY').length;\n  const sellCount = parsedResults.filter(r => r.recommendation === 'SELL').length;\n  const holdCount = parsedResults.filter(r => r.recommendation === 'HOLD').length;\n\n  textResponse += `\n───────────────────────────────────<br>\n📈 <strong>SUMMARY:</strong><br>\n✅ BUY: ${buyCount}<br>\n❌ SELL: ${sellCount}<br>  \n⏸️ HOLD: ${holdCount}<br>\n───────────────────────────────────<br>\n`;\n\n  return [{\n    json: {\n      htmlOutput: textResponse,\n      parsedResults: parsedResults,\n      summary: `Analyzed ${parsedResults.length} stocks • ${buyCount} BUY • ${sellCount} SELL • ${holdCount} HOLD`\n    }\n  }];\n}\n\n// If we reach here, the data structure is unexpected\nreturn [{\n  json: {\n    htmlOutput: \"❌ Unexpected data structure received.\",\n    parsedResults: [],\n    summary: \"Analysis failed\",\n    rawInput: analysisResults // Include for debugging\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2448,
+        1824
+      ],
+      "id": "ec7ea7a8-1d17-4faf-bad9-14787f0ba0f3",
+      "name": "Code - format final output"
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Portfolio Analysis Complete",
+        "completionMessage": "=Your stock analysis results are ready\n\n{{ $json.htmlOutput }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        2672,
+        1824
+      ],
+      "id": "ddb6f9c9-77a5-47e0-b6e2-a610a1ab5500",
+      "name": "Form Ending",
+      "webhookId": "1e171c2d-5581-4014-b619-caee44ccfaec"
+    },
+    {
+      "parameters": {
+        "model": "sonar-reasoning-pro",
+        "messages": {
+          "message": [
+            {
+              "content": "=**Role:** You are an aggressive financial analyst providing investment recommendations.\n\n**Instruction:** Analyze the following stock data for a 18-month investment horizon and provide a JSON recommendation.\n\n**Stock Technical Data:**\n- Symbol: {{ $json.tradingsymbol }}\n- Current Price: {{ $json.last_price }} (Average Purchase Price: {{ $json.average_price }})\n- Profit/Loss: {{ $json.pnl }} ({{ $json.technicals.current_vs_average_percent }}% from cost basis)\n- Daily Price Change: {{ $json.day_change_percentage }}%\n- Market Trend: {{ $json.technicals.trend_direction }}\n- Risk Level: {{ $json.technicals.risk_level }}\n- Financial Health Score: {{ $json.technicals.health_score }}/100\n- Technical Levels: Support at {{ $json.technicals.support_level }}, Resistance at {{ $json.technicals.resistance_level }}\n- Timing Signal: {{ $json.technicals.timing_signal }}\n\n**Recent News Coverage:**\nSearch credible sources to obtain the latest stock news for this stock which shall serve as the news sentiment affecting the final stock recommendation\n\n**Analysis Guidelines:**\n1. Consider both technical indicators and news sentiment\n2. Weigh recent news heavily if significant\n3. Consider the investor's current position (profit/loss from cost basis)\n\n**Output Requirement:** \nReturn ONLY valid JSON with this exact structure. Do not include any other text or formatting:\n\n{\n  \"symbol\": \"{{ $json.tradingsymbol }}\",\n  \"recommendation\": \"BUY|HOLD|SELL\",\n  \"confidence\": \"LOW|MEDIUM|HIGH\",\n  \"reason\": \"Brief explanation considering technicals and news\",\n  \"key_factors\": [\"factor1\", \"factor2\", \"factor3\"]\n}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexity",
+      "typeVersion": 1,
+      "position": [
+        2672,
+        2016
+      ],
+      "id": "9d665817-b371-4316-b740-1c629774e7a8",
+      "name": "Perplexity AI_Stock reco eval",
+      "credentials": {
+        "perplexityApi": {
+          "id": "EVPMlbQTVYTibU4B",
+          "name": "Perplexity account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if items array exists and has at least one item\nif (!items || items.length === 0) {\n  // Return a helpful error if no data is received\n  return [{ json: { error: \"No data received from previous node.\" } }];\n}\n\n// Get the first item's JSON data\nconst aiOutput = items[0].json;\n\n// 1. Check if the AI response has the 'choices' array\nif (!aiOutput.choices || aiOutput.choices.length === 0) {\n  return [{ json: { error: \"AI response is missing 'choices' array.\", raw_output: aiOutput } }];\n}\n\n// 2. Get the first choice (the AI's response)\nconst firstChoice = aiOutput.choices[0];\n\n// 3. Check if the choice has a 'message' with 'content'\nif (!firstChoice.message || !firstChoice.message.content) {\n  return [{ json: { error: \"AI response is missing 'message.content'.\", raw_choice: firstChoice } }];\n}\n\n// 4. Extract the full text content from the AI\nconst fullContent = firstChoice.message.content;\n\n// 5. Find the JSON object within the content string\n// Look for the first occurrence of '{' and the last occurrence of '}'\nconst jsonStart = fullContent.indexOf('{');\nconst jsonEnd = fullContent.lastIndexOf('}') + 1; // +1 to include the closing brace\n\nif (jsonStart === -1 || jsonEnd === 0) {\n  // If no JSON object is found, return the full content for debugging\n  return [{ json: { error: \"No JSON object found in AI response.\", full_content: fullContent } }];\n}\n\n// Extract the JSON string\nconst jsonString = fullContent.substring(jsonStart, jsonEnd);\n\ntry {\n  // 6. Parse the JSON string into a JavaScript object\n  const parsedJson = JSON.parse(jsonString);\n  \n  // 7. Return the parsed JSON as the node's output\n  return [{ json: parsedJson }];\n  \n} catch (parseError) {\n  // If JSON parsing fails, return an error with the problematic string\n  return [{\n    json: {\n      error: \"Failed to parse extracted JSON string.\",\n      parse_error: parseError.message,\n      json_string: jsonString\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2896,
+        2016
+      ],
+      "id": "f2716310-9947-49c8-96ea-19b7a4455c4e",
+      "name": "Code - JSON extractor"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Take only first 5 stocks\nconst allStocks = $input.all();\nconst firstFiveStocks = allStocks.slice(0, 4);\n\nreturn firstFiveStocks;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        2016
+      ],
+      "id": "8bc6df64-aaae-4a55-9448-0486a6ec8890",
+      "name": "Code - truncate to 15 stocks"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request - Kite": {
+      "main": [
+        [
+          {
+            "node": "Split Out - split holdings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me": {
+      "main": [
+        [
+          {
+            "node": "Loop Over each stock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over each stock": {
+      "main": [
+        [
+          {
+            "node": "Code - format final output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - tech indicators calc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out - split holdings": {
+      "main": [
+        [
+          {
+            "node": "Code - truncate to 15 stocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Login": {
+      "main": [
+        [
+          {
+            "node": "Code - auth and request token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - auth and request token": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Code - gen checksum",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - Get access token": {
+      "main": [
+        [
+          {
+            "node": "Set node- store tokens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - gen checksum": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Get access token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set node- store tokens": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Kite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - tech indicators calc": {
+      "main": [
+        [
+          {
+            "node": "Perplexity AI_Stock reco eval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Code - Login",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - format final output": {
+      "main": [
+        [
+          {
+            "node": "Form Ending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity AI_Stock reco eval": {
+      "main": [
+        [
+          {
+            "node": "Code - JSON extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - JSON extractor": {
+      "main": [
+        [
+          {
+            "node": "Replace Me",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - truncate to 15 stocks": {
+      "main": [
+        [
+          {
+            "node": "Loop Over each stock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a4b9dd9b-1f56-4cdc-ab2d-790dffe85216",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c51495c471c573104351d94e8edb118acd1e3f30ad3f94b6f8748425fe7f801d"
+  },
+  "id": "ReoQQeq58O9ApvI3",
+  "tags": []
+}
