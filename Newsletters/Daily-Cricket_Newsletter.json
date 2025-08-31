@@ -55,7 +55,7 @@
     },
     {
       "parameters": {
-        "sendTo": "kdawg0411@gmail.com",
+        "sendTo": "placeholder@gmail.com",
         "subject": "Your Daily Cricket Digest from Karthik Rao",
         "message": "={{ $json.html }}",
         "options": {
