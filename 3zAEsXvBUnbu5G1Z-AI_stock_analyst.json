@@ -1,0 +1,156 @@
+{
+  "name": "AI stock analyst",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are an Indian stock analyst agent. Use available tools to research and provide a concise summary of the stock's latest fundamentals and technicals. Include key financial metrics, recent price trends, support and resistance levels, and relevant market commentary. Make sure the currency you're using is INR"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "09192336-8ca9-41a8-a602-9bd285e62982",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        208
+      ],
+      "id": "238e3f1d-37ca-4a04-9563-464c709676e7",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "model": "sonar",
+        "messages": {
+          "message": [
+            {
+              "content": "=Provide a structured research on the stock/share provided by the user {{ $json.chatInput }}"
+            }
+          ]
+        },
+        "options": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.perplexityTool",
+      "typeVersion": 1,
+      "position": [
+        368,
+        208
+      ],
+      "id": "76c0b197-60a0-4cf5-b939-72f2af13604c",
+      "name": "Message a model in Perplexity",
+      "alwaysOutputData": false,
+      "credentials": {
+        "perplexityApi": {
+          "id": "mnZklL05VyJOncmi",
+          "name": "Perplexity account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "This is Karthik's Stock Analysis AI Agent. Please enter the Stock Name and hit Enter",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3cde997b-685e-4129-b4e7-d73e100970ab",
+      "name": "Stock Input",
+      "webhookId": "5142bd30-9521-4c74-bfdf-d41fbd5d0899"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-20250514",
+          "cachedResultName": "Claude 4 Sonnet"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        80,
+        208
+      ],
+      "id": "cb53b4b9-3fe8-4802-aef4-50651ded35e3",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "w5v595VAifD7o3Qa",
+          "name": "Anthropic account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model in Perplexity": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stock Input": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {},
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
