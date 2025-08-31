@@ -1,0 +1,11 @@
+# Ignore the n8n SQLite database
+*.db
+*.sqlite
+
+# Ignore environment files with credentials
+.env
+.env.*
+
+# OS generated files
+.DS_Store
+Thumbs.db

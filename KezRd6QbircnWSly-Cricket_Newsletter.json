@@ -1,0 +1,754 @@
+{
+  "name": "Cricket Newsletter",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "094bd21e-1d23-4f06-a286-501045a53c9b",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json['h2.cb-nws-hdln'] }}",
+              "rightValue": "array"
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "fad1335c-ac07-4333-a9b3-ec4caae269ea",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1008,
+        576
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Title: {{ $json['h2.cb-nws-hdln'] }}\nDescription: {{ $json['cb-nws-intr'] }}\n\nIs this article related to the game of cricket? Return only: true or false\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=You are a classification assistant.\n\nYour role is to analyze the title and description of an article and determine if it is related to the game of cricket. \n\nYou must only return {\"answer\": true} if the article is clearly related to the game of cricket. \n\nIf it is not clearly related, return {\"answer\": false}.\n\nIf you are unable to conclude, your response must be {\"answer\": false}. Make sure that your output is only one of the two JSON options: {\"answer\": true} or {\"answer\": false}. Do not provide explanations."
+        }
+      },
+      "id": "14a0fcf2-3538-40d8-84ab-07857a196847",
+      "name": "Agent Classification",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1440,
+        384
+      ],
+      "typeVersion": 1.8
+    },
+    {
+      "parameters": {
+        "sendTo": "kdawg0411@gmail.com",
+        "subject": "Your Daily Cricket Digest from Karthik Rao",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "3150068e-4f21-4f05-8ba4-f8bfd695b526",
+      "name": "Send to your mailing list",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        736,
+        960
+      ],
+      "webhookId": "0d7031f6-9191-4fe6-96cb-86d7cec9398b",
+      "notesInFlow": true,
+      "typeVersion": 2.1,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "5HMXrsma2cOijssP",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fixed n8n compatible JavaScript for Cricket News Email HTML\n// Paste this code directly into your n8n Code node\n\n// Get the cricket news data from input\nconst cricketData = $input.first().json;\n\n// Helper function to safely escape HTML content\nfunction escapeHtml(text) {\n    if (!text) return '';\n    return text\n        .replace(/&/g, '&amp;')\n        .replace(/</g, '&lt;')\n        .replace(/>/g, '&gt;')\n        .replace(/\"/g, '&quot;')\n        .replace(/'/g, '&#39;')\n        .replace(/`/g, '&#96;');\n}\n\n// Helper function to get higher resolution image URL\nfunction getHighResImageUrl(originalUrl) {\n    if (!originalUrl) return '';\n    \n    // Check if it's a Cricbuzz image URL with dimensions\n    if (originalUrl.includes('static.cricbuzz.com') && originalUrl.includes('/v1/')) {\n        // Replace the dimension part (like 205x152) with a larger size\n        // Try common higher resolutions that Cricbuzz might support\n        const higherResUrl = originalUrl\n            .replace(/\\/\\d+x\\d+\\//, '/400x300/')  // Try 400x300 first\n            .replace(/\\/205x152\\//, '/400x300/');\n        \n        return higherResUrl;\n    }\n    \n    return originalUrl;\n}\n\n// Helper function to create a single news card\nfunction createNewsCard(article) {\n    try {\n        const originalImageUrl = article['img.cb-lst-img'] || article.image || article.img || '';\n        const imageUrl = getHighResImageUrl(originalImageUrl);\n        const rawHeadline = article['h2.cb-nws-hdln'] || article.title || article.headline || 'No Title';\n        const rawIntro = article['cb-nws-intr'] || article.description || article.intro || article.summary || '';\n        const rawTime = article['cb-nws-time'] || article.time || article.date || article.published || 'No date';\n        const link = article['cb-lst-itm-lg'] || article.link || article.url || '#';\n        \n        // Safely escape all text content\n        const headline = escapeHtml(rawHeadline.toString());\n        const intro = escapeHtml(rawIntro.toString().replace(/\\n/g, ' '));\n        const time = escapeHtml(rawTime.toString());\n        const fullLink = link.startsWith('http') ? link : `https://cricbuzz.com${link}`;\n        \n        return `\n            <div style=\"background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1); border: 2px solid #e0e0e0; position: relative; margin-bottom: 25px;\">\n                <div style=\"content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #dc143c 0%, #87CEEB 100%);\"></div>\n                \n                <div style=\"width: 100%; height: 200px; overflow: hidden; background: linear-gradient(45deg, #f0f8ff, #e6f3ff); display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #e0e0e0;\">\n                    ${imageUrl ? \n                        `<img src=\"${imageUrl}\" alt=\"${headline}\" style=\"width: 100%; height: 100%; object-fit: cover; display: block;\">` :\n                        '<div style=\"color: #2c3e50; font-size: 1.1em; text-align: center; padding: 20px; background: linear-gradient(45deg, #f0f8ff, #fff); border: 2px dashed #87CEEB; margin: 10px; border-radius: 8px; font-weight: 600;\">🏏 No Image Available</div>'\n                    }\n                </div>\n                \n                <div style=\"padding: 25px;\">\n                    <div style=\"display: flex; align-items: center; gap: 15px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f8f8f8;\">\n                        <span style=\"background: linear-gradient(135deg, #dc143c 0%, #b91c3c 100%); color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(220, 20, 60, 0.3);\">Cricket News</span>\n                        <span style=\"color: #2c3e50; font-size: 0.9em; font-weight: 600; background: #f8f9fa; padding: 6px 12px; border-radius: 12px; border: 2px solid #dee2e6;\">${time}</span>\n                    </div>\n                    \n                    <h2 style=\"font-size: 1.3em; font-weight: 700; color: #2c3e50; margin-bottom: 15px; line-height: 1.4; border-left: 4px solid #dc143c; padding-left: 15px;\">${headline}</h2>\n                    \n                    <p style=\"color: #495057; line-height: 1.6; font-size: 0.95em; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef; font-weight: 500;\">${intro}</p>\n                    \n                    <a href=\"${fullLink}\" style=\"display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; padding: 12px 24px; border-radius: 25px; text-decoration: none; font-weight: 600; box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);\" target=\"_blank\">\n                        Read Full Article →\n                    </a>\n                </div>\n            </div>\n        `;\n    } catch (error) {\n        console.error('Error creating news card:', error, 'Article:', article);\n        return `<div style=\"padding: 20px; color: red; border: 1px solid red; margin: 10px;\">Error processing article: ${error.message}</div>`;\n    }\n}\n\n// Function to check if an article is valid cricket news\nfunction isValidCricketArticle(article) {\n    // Check if article exists and has required fields\n    if (!article || typeof article !== 'object') return false;\n    \n    // Check for headline/title\n    const hasTitle = article['h2.cb-nws-hdln'] || article.title || article.headline;\n    \n    // For your data structure, check specifically for Cricket_News === true\n    const isCricketNews = article.Cricket_News === true;\n    \n    // Must have both title and cricket news flag\n    return hasTitle && isCricketNews;\n}\n\n// Generate all news cards\nlet newsCardsHTML = '';\nlet articleCount = 0;\n\nconsole.log('Input data type:', typeof cricketData);\nconsole.log('Is array:', Array.isArray(cricketData));\nconsole.log('Data length:', Array.isArray(cricketData) ? cricketData.length : 'Not an array');\n\nif (Array.isArray(cricketData)) {\n    console.log('Processing array of', cricketData.length, 'items');\n    \n    for (let i = 0; i < cricketData.length; i++) {\n        const article = cricketData[i];\n        console.log(`\\nArticle ${i + 1}:`);\n        console.log('- Has headline:', !!(article['h2.cb-nws-hdln']));\n        console.log('- Cricket_News flag:', article.Cricket_News);\n        console.log('- Headline:', article['h2.cb-nws-hdln']);\n        \n        const hasTitle = !!(article['h2.cb-nws-hdln']);\n        const isCricketNews = article.Cricket_News === true;\n        \n        console.log('- Valid article:', hasTitle && isCricketNews);\n        \n        if (hasTitle && isCricketNews) {\n            console.log('- Adding article to HTML');\n            try {\n                const cardHTML = createNewsCard(article);\n                newsCardsHTML += cardHTML;\n                articleCount++;\n                console.log('- Successfully added. Total count:', articleCount);\n            } catch (error) {\n                console.error('- Error creating card:', error);\n            }\n        } else {\n            console.log('- Skipping article - failed validation');\n        }\n    }\n    \n    console.log('\\nFinal article count:', articleCount);\n} else if (cricketData && typeof cricketData === 'object') {\n    // If data is a single object instead of array\n    console.log('Processing single object');\n    if (isValidCricketArticle(cricketData)) {\n        newsCardsHTML = createNewsCard(cricketData);\n        articleCount = 1;\n    }\n}\n\n// If no articles found, show debug info\nif (articleCount === 0) {\n    console.log('No valid articles found. Data structure:', typeof cricketData);\n    console.log('Is array:', Array.isArray(cricketData));\n    console.log('Data keys:', cricketData ? Object.keys(cricketData) : 'No data');\n    \n    newsCardsHTML = `\n        <div style=\"text-align: center; padding: 40px; color: #6c757d; font-size: 1.2em; background: #f8f9fa; border-radius: 10px; border: 2px solid #e9ecef;\">\n            <h3 style=\"color: #dc143c; margin-bottom: 20px;\">🏏 No Cricket News Available</h3>\n            <p style=\"margin-bottom: 15px;\">Debug Info:</p>\n            <div style=\"text-align: left; background: white; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.9em;\">\n                <p><strong>Data Type:</strong> ${typeof cricketData}</p>\n                <p><strong>Is Array:</strong> ${Array.isArray(cricketData)}</p>\n                <p><strong>Length/Keys:</strong> ${Array.isArray(cricketData) ? cricketData.length : (cricketData ? Object.keys(cricketData).length : 0)}</p>\n            </div>\n        </div>\n    `;\n}\n\n// Complete email HTML\nconst emailHTML = `\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Cricket Daily - Latest News</title>\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        body {\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            background: linear-gradient(135deg, #87CEEB 0%, #1e3c72 100%);\n            min-height: 100vh;\n            padding: 20px;\n        }\n        .container {\n            max-width: 800px;\n            margin: 0 auto;\n            background: rgba(255, 255, 255, 0.95);\n            border-radius: 15px;\n            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);\n            overflow: hidden;\n            border: 3px solid #87CEEB;\n        }\n        .header {\n            background: linear-gradient(135deg, #dc143c 0%, #87CEEB 100%);\n            color: white;\n            padding: 30px;\n            text-align: center;\n            border-bottom: 4px solid #dc143c;\n        }\n        .header h1 {\n            font-size: 2.5em;\n            margin-bottom: 10px;\n            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);\n        }\n        .header p {\n            font-size: 1.2em;\n            opacity: 0.9;\n        }\n        .news-content {\n            padding: 30px;\n        }\n        .footer {\n            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);\n            color: white;\n            text-align: center;\n            padding: 25px;\n            font-size: 1.1em;\n            border-top: 4px solid #dc143c;\n        }\n        @media (max-width: 768px) {\n            .container {\n                margin: 10px;\n                border-radius: 10px;\n            }\n            .header h1 {\n                font-size: 2em;\n            }\n            .news-content {\n                padding: 15px;\n            }\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <header class=\"header\">\n            <h1>🏏 Cricket Daily</h1>\n            <p>Your Ultimate Source for Cricket News & Updates</p>\n        </header>\n        \n        <main class=\"news-content\">\n            ${newsCardsHTML}\n        </main>\n        \n        <footer class=\"footer\">\n            <div style=\"display: flex; justify-content: center; align-items: center; gap: 15px;\">\n                <span style=\"font-size: 1.5em;\">🏏</span>\n                <span>Cricket Daily - Stay Updated with the Latest Cricket News (${articleCount} articles)</span>\n                <span style=\"font-size: 1.5em;\">🏏</span>\n            </div>\n        </footer>\n    </div>\n</body>\n</html>\n`;\n\n// Return the result in n8n format\nreturn [{ \n    json: { \n        html: emailHTML,\n        articleCount: articleCount,\n        debug: {\n            inputType: typeof cricketData,\n            isArray: Array.isArray(cricketData),\n            dataLength: Array.isArray(cricketData) ? cricketData.length : (cricketData ? Object.keys(cricketData).length : 0)\n        }\n    } \n}];"
+      },
+      "id": "10be506c-e969-4637-a0c9-ecd271eceb25",
+      "name": "Generate Email HTML",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        560,
+        960
+      ],
+      "notesInFlow": true,
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "dataPropertyName": "cb-lst-itm-lg",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "h2.cb-nws-hdln",
+              "cssSelector": ".cb-nws-hdln-ancr"
+            },
+            {
+              "key": "cb-nws-intr",
+              "cssSelector": ".cb-nws-intr"
+            },
+            {
+              "key": "meta[itemprop=\"url\"]",
+              "cssSelector": "div.cb-col.cb-col-33.cb-pos-rel[itemscope][itemtype=\"https://schema.org/ImageObject\"] > meta[itemprop=\"url\"]",
+              "returnValue": "attribute",
+              "attribute": "content"
+            },
+            {
+              "key": "cb-nws-time",
+              "cssSelector": ".cb-nws-time"
+            },
+            {
+              "key": "cb-lst-itm-lg",
+              "cssSelector": "div.cb-nws-lst-rt a.cb-nws-hdln-ancr",
+              "returnValue": "attribute",
+              "attribute": "href"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c3c561e2-17b1-4ca5-a1ca-b62035439f27",
+      "name": "Parse Article Blocks",
+      "type": "n8n-nodes-base.html",
+      "position": [
+        784,
+        576
+      ],
+      "notesInFlow": true,
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "cb-lst-itm-lg",
+              "cssSelector": ".cb-lst-itm-lg",
+              "returnValue": "html",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "53cb1082-ec49-45d0-abae-f4b45caa9b24",
+      "name": "Extract Articles Blocks",
+      "type": "n8n-nodes-base.html",
+      "position": [
+        352,
+        576
+      ],
+      "notesInFlow": true,
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "cb-lst-itm-lg",
+        "options": {}
+      },
+      "id": "e70eb5e5-1c0f-4a13-8e84-8b52decc3b52",
+      "name": "Split Out by Article Block",
+      "type": "n8n-nodes-base.splitOut",
+      "position": [
+        560,
+        576
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "1f3ec6fe-b149-4e03-9f13-953bc15f5bd7",
+      "name": "Loop Over Articles",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        1232,
+        576
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "mode": "combineBySql"
+      },
+      "id": "83814ab6-7507-40fe-963f-2e2acabd0ec0",
+      "name": "Merge Article + Flag",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        2048,
+        432
+      ],
+      "notesInFlow": true,
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1D1KHHzXjrqFcxpQu4U7K5sGKJlR5c2lzcoD0_X_WWZE",
+          "mode": "list",
+          "cachedResultName": "Cricket_News",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1D1KHHzXjrqFcxpQu4U7K5sGKJlR5c2lzcoD0_X_WWZE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gbGuo5YMRNy2ivuvT43jxAVBA27k7oL-VSWWO1eKHS0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Cricket_News": "={{ $json.Cricket_News }}",
+            "h2.cb-nws-hdln": "={{ $json['h2.cb-nws-hdln'] }}",
+            "cb-nws-intr": "={{ $json['cb-nws-intr'] }}",
+            "cb-nws-time": "={{ $json['cb-nws-time'] }}",
+            "cb-lst-itm-lg": "={{ $json['cb-lst-itm-lg'] }}",
+            "img.cb-lst-img": "={{ $json['meta[itemprop=\"url\"]'] }}",
+            "date": "={{ DateTime.now().toFormat('dd/MM/yyyy') }}"
+          },
+          "matchingColumns": [
+            "Rock News"
+          ],
+          "schema": [
+            {
+              "id": "Cricket_News",
+              "displayName": "Cricket_News",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "h2.cb-nws-hdln",
+              "displayName": "h2.cb-nws-hdln",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cb-nws-intr",
+              "displayName": "cb-nws-intr",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "img.cb-lst-img",
+              "displayName": "img.cb-lst-img",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cb-nws-time",
+              "displayName": "cb-nws-time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cb-lst-itm-lg",
+              "displayName": "cb-lst-itm-lg",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "010dafcf-c671-40e0-8cad-4aab308c568d",
+      "name": "Record Results",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        2272,
+        512
+      ],
+      "notesInFlow": true,
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2SvHRjvyqH6qC7tc",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"answer\": \"boolean | null\"\n}\n"
+      },
+      "id": "b8570a93-95fc-4071-ae3b-f3ed24103659",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        1712,
+        560
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "content": "### 1. Workflow Trigger with Cron Job\nThe workflow is triggered every morning at 08:30 am (local time)\n\n#### How to setup?\n- Select the time you want to set it up\n",
+        "height": 680,
+        "width": 220,
+        "color": 7
+      },
+      "id": "608d7893-53ad-4344-a925-bfcf287aa739",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -160,
+        32
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 4. Generate HTML page and send by email\nThis block collects all the articles of the day to create a prettified HTML page that is sent using the Gmail node.\n#### How to setup?\n- **Gmail Node:** set up your Gmail API credentials\n[Learn more about the Gmail Trigger Node]\n",
+        "height": 380,
+        "width": 620,
+        "color": 7
+      },
+      "id": "cb1c803b-6fd5-47df-803c-d160bbf08f44",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        80,
+        752
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 2. Scrapping and Parsing of Articles blocks\nThis starts with the HTTP node collecting HTML code that is parsed to extract Article Titles, Link, Image Cover and Reading time.\n\n#### How to setup?\n*Nothing to do*",
+        "height": 700,
+        "width": 840,
+        "color": 7
+      },
+      "id": "73ec34ce-1223-4c55-b32f-332ef64090d5",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        80,
+        32
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "### 3. Classifiy all the articles (Sustainability: true or false)\nThis starts with the If node that filters based on the scope date fixed by you. Through the loop, the AI Agent classify the articles using the title and description.\nThe ones that are flagged as \"sustainability\" are recorded in a Google Sheet.\n\n#### How to setup?\n- **Record results in the Google Sheet Node**:\n   1. Add your Google Sheet API credentials to access the Google Sheet file\n   2. Select the file using the list, an URL or an ID\n   3. Select the sheet in which you want to record the articles\n   4. Map the fields: **sustainability, type, date, title, link, description, image, read time**\n  [Learn more about the Google Sheet Node](https://docs.n8n.io/integrations/builtin/app-nodes/n8n-nodes-base.googlesheets)\n- **AI Agent with the Chat Model**:\n   1. Add a chat model with the required credentials *(Example: Open AI 4o-mini)*",
+        "height": 700,
+        "width": 1440,
+        "color": 7
+      },
+      "id": "ef330aac-c688-4db6-9b6b-9fcbe18ffb8f",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1008,
+        32
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-20250514",
+          "cachedResultName": "Claude 4 Sonnet"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1440,
+        544
+      ],
+      "id": "5b48d042-a657-4108-89a5-17a7369b0e36",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "w5v595VAifD7o3Qa",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "id": "5d697be2-875a-41cd-8688-1e24ba52bdaf",
+      "name": "Trigger at 05:00 pm",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        -96,
+        576
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "compare": "selectedFields",
+        "fieldsToCompare": "h2.cb-nws-hdln",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        368,
+        960
+      ],
+      "id": "1b504af1-3b7a-4c33-9806-33be3f47d6f1",
+      "name": "Remove Duplicates"
+    },
+    {
+      "parameters": {
+        "url": "https://www.cricbuzz.com/cricket-news",
+        "options": {}
+      },
+      "id": "2db0132d-2749-4404-90fb-47a449d9f0dd",
+      "name": "cricket news",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        128,
+        576
+      ],
+      "notesInFlow": true,
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dcfc8260-1125-4883-8895-8a5f55d09341",
+              "name": "Cricket_News",
+              "type": "string",
+              "value": "={{ $json.output.answer }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3a2d6fb9-00dd-4f03-bd06-3391685bff49",
+      "name": "Cricket News Flag",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1824,
+        384
+      ],
+      "notesInFlow": true,
+      "retryOnFail": false,
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1D1KHHzXjrqFcxpQu4U7K5sGKJlR5c2lzcoD0_X_WWZE",
+          "mode": "list",
+          "cachedResultName": "Cricket_News",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1D1KHHzXjrqFcxpQu4U7K5sGKJlR5c2lzcoD0_X_WWZE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1D1KHHzXjrqFcxpQu4U7K5sGKJlR5c2lzcoD0_X_WWZE/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "date",
+              "lookupValue": "={{ new Date().toLocaleDateString('en-GB') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2bcc1a6e-82da-4eef-8a0a-505450062bf1",
+      "name": "Get cricket News",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        160,
+        960
+      ],
+      "notesInFlow": true,
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "2SvHRjvyqH6qC7tc",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Classification": {
+      "main": [
+        [
+          {
+            "node": "Cricket News Flag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Email HTML": {
+      "main": [
+        [
+          {
+            "node": "Send to your mailing list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Article Blocks": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Articles Blocks": {
+      "main": [
+        [
+          {
+            "node": "Split Out by Article Block",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out by Article Block": {
+      "main": [
+        [
+          {
+            "node": "Parse Article Blocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Articles": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Agent Classification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge Article + Flag",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Article + Flag": {
+      "main": [
+        [
+          {
+            "node": "Record Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Results": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Agent Classification",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent Classification",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger at 05:00 pm": {
+      "main": [
+        [
+          {
+            "node": "cricket news",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get cricket News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Generate Email HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cricket news": {
+      "main": [
+        [
+          {
+            "node": "Extract Articles Blocks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cricket News Flag": {
+      "main": [
+        [
+          {
+            "node": "Merge Article + Flag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get cricket News": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": {
+    "node:Trigger at 02:30 pm": {
+      "recurrenceRules": []
+    },
+    "node:Trigger at 05:00 pm": {
+      "recurrenceRules": []
+    }
+  },
+  "pinData": {},
+  "triggerCount": 1,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
