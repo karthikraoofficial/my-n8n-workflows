@@ -9,5 +9,4 @@ Here are some AI Agent workflows I've built so far:
 4. Zerodha Stock Holdings analysis + recommendation engine
 5. Basic Text to Speech Project (using Elevenlabs)
 6. Real-time Transaction Risk Assessment & Fraud Prediction (without AI Agent)
-7. 
 
