@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Fraud Detection - Live Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .card h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
+        .transaction-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .submit-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results {
+            min-height: 200px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid;
+        }
+
+        .alert-high {
+            background: #fee;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .alert-medium {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+
+        .alert-low {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .risk-score {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .risk-factors {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .risk-factors li {
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-left: 3px solid #dc3545;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .workflow-info {
+            background: rgba(255,255,255,0.95);
+            border-radius: 16px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .workflow-steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .step {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            position: relative;
+        }
+
+        .step-number {
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ AI Fraud Detection System</h1>
+            <p>Real-time Transaction Monitoring for Indian Banking & Payments</p>
+        </div>
+
+        <!-- Live Demo Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalTransactions">1,247</div>
+                <div class="stat-label">Transactions Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="fraudDetected">23</div>
+                <div class="stat-label">Fraud Detected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="falsePositives">0.8%</div>
+                <div class="stat-label">False Positive Rate</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgResponseTime">47ms</div>
+                <div class="stat-label">Avg Response Time</div>
+            </div>
+        </div>
+
+        <div class="demo-grid">
+            <!-- Transaction Input -->
+            <div class="card">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    Test Transaction
+                </h3>
+                <form class="transaction-form" onsubmit="processTransaction(event)">
+                    <div class="form-group">
+                        <label>Amount (₹)</label>
+                        <input type="number" id="amount" value="50000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select id="paymentMethod">
+                            <option value="UPI">UPI</option>
+                            <option value="Card">Debit/Credit Card</option>
+                            <option value="Wallet">Digital Wallet</option>
+                            <option value="NetBanking">Net Banking</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Merchant Category</label>
+                        <select id="merchantCategory">
+                            <option value="Food">Food & Dining</option>
+                            <option value="Electronics">Electronics</option>
+                            <option value="Jewelry">Jewelry</option>
+                            <option value="Fuel">Fuel</option>
+                            <option value="Grocery">Grocery</option>
+                            <option value="Travel">Travel</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Location</label>
+                        <select id="location">
+                            <option value="Mumbai, Maharashtra">Mumbai, Maharashtra</option>
+                            <option value="Delhi, NCR">Delhi, NCR</option>
+                            <option value="Bangalore, Karnataka">Bangalore, Karnataka</option>
+                            <option value="Chennai, Tamil Nadu">Chennai, Tamil Nadu</option>
+                            <option value="Hyderabad, Telangana">Hyderabad, Telangana</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>User ID</label>
+                        <input type="text" id="userId" value="USER123">
+                    </div>
+                    <button type="submit" class="submit-btn" id="submitBtn">
+                        Analyze Transaction
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Display -->
+            <div class="card">
+                <h3>
+                    <svg class="icon" viewBox="0 0 24 24">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    Risk Analysis Results
+                </h3>
+                <div class="results" id="results">
+                    <div style="text-align: center; color: #666; font-style: italic; padding: 40px;">
+                        Submit a transaction to see risk analysis results...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflow Information -->
+        <div class="workflow-info">
+            <h3>🔄 n8n Workflow Architecture</h3>
+            <p>This demo simulates the complete n8n workflow for real-time fraud detection in Indian banking systems.</p>
+            
+            <div class="workflow-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <strong>Transaction Webhook</strong><br>
+                    Receives incoming transactions from payment gateways (UPI/Cards/Wallets)
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <strong>Transaction Processor</strong><br>
+                    Validates and enriches transaction data with additional context
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <strong>Fraud Detection Engine</strong><br>
+                    Rule-based analysis for suspicious patterns and anomalies
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <strong>ML Model Scoring</strong><br>
+                    AI model assigns fraud probability based on learned patterns
+                </div>
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <strong>Composite Risk Analyzer</strong><br>
+                    Combines rule-based and ML scores for final decision
+                </div>
+                <div class="step">
+                    <div class="step-number">6</div>
+                    <strong>Risk Router</strong><br>
+                    Routes high-risk transactions to security team, others to approval
+                </div>
+            </div>
+
+            <div style="margin-top: 25px; padding: 20px; background: #e8f4fd; border-radius: 8px;">
+                <h4>🇮🇳 Indian Banking Compliance Features:</h4>
+                <ul style="margin-top: 10px; padding-left: 20px;">
+                    <li>RBI transaction reporting for amounts ≥ ₹50,000</li>
+                    <li>UPI-specific validation and monitoring</li>
+                    <li>Multi-language support for regional banking</li>
+                    <li>AML (Anti-Money Laundering) flagging</li>
+                    <li>KYC reverification triggers</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulated transaction processing
+        async function processTransaction(event) {
+            event.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const results = document.getElementById('results');
+            
+            // Show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Analyzing...';
+            results.innerHTML = '<div class="loading"><div class="spinner"></div> Processing transaction through AI fraud detection...</div>';
+            
+            // Get form data
+            const transaction = {
+                transaction_id: `TXN${Date.now()}`,
+                user_id: document.getElementById('userId').value,
+                amount: parseInt(document.getElementById('amount').value),
+                payment_method: document.getElementById('paymentMethod').value,
+                merchant_category: document.getElementById('merchantCategory').value,
+                location: document.getElementById('location').value,
+                timestamp: new Date().toISOString(),
+                device_id: `DEV${Math.floor(Math.random() * 1000)}`,
+                ip_address: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
+                upi_id: document.getElementById('paymentMethod').value === 'UPI' ? `${document.getElementById('userId').value.toLowerCase()}@paytm` : null
+            };
+
+            // Simulate processing delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Run fraud detection algorithm
+            const analysis = runFraudDetection(transaction);
+            
+            // Display results
+            displayResults(analysis);
+            
+            // Update stats
+            updateStats();
+            
+            // Reset button
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Analyze Transaction';
+        }
+
+        function runFraudDetection(transaction) {
+            const riskFactors = [];
+            let riskScore = 0;
+            const alerts = [];
+
+            // Amount analysis
+            if (transaction.amount > 100000) {
+                riskScore += 40;
+                riskFactors.push('Very high transaction amount');
+                alerts.push({
+                    type: 'HIGH_AMOUNT',
+                    severity: 'HIGH',
+                    message: `Amount ₹${transaction.amount} exceeds ₹1,00,000 threshold`
+                });
+            } else if (transaction.amount > 25000) {
+                riskScore += 20;
+                riskFactors.push('High transaction amount');
+                alerts.push({
+                    type: 'MEDIUM_AMOUNT',
+                    severity: 'MEDIUM',
+                    message: `Amount ₹${transaction.amount} is above normal threshold`
+                });
+            }
+
+            // Time analysis
+            const hour = new Date(transaction.timestamp).getHours();
+            if (hour < 6 || hour > 23) {
+                riskScore += 15;
+                riskFactors.push('Off-hours transaction');
+                alerts.push({
+                    type: 'OFF_HOURS',
+                    severity: 'MEDIUM',
+                    message: `Transaction at ${hour}:00 is outside normal hours`
+                });
+            }
+
+            // Merchant category risk
+            const highRiskCategories = ['Jewelry', 'Electronics'];
+            if (highRiskCategories.includes(transaction.merchant_category)) {
+                riskScore += 15;
+                riskFactors.push('High-risk merchant category');
+                alerts.push({
+                    type: 'HIGH_RISK_MERCHANT',
+                    severity: 'MEDIUM',
+                    message: `High-risk category: ${transaction.merchant_category}`
+                });
+            }
+
+            // Location analysis (simulated)
+            if (transaction.location.includes('Delhi') && transaction.user_id === 'USER123') {
+                riskScore += 25;
+                riskFactors.push('Unusual location for user');
+                alerts.push({
+                    type: 'LOCATION_ANOMALY',
+                    severity: 'HIGH',
+                    message: 'Transaction from unusual location for this user'
+                });
+            }
+
+            // UPI specific checks
+            if (transaction.payment_method === 'UPI') {
+                if (!transaction.upi_id || !transaction.upi_id.includes('@')) {
+                    riskScore += 25;
+                    riskFactors.push('Invalid UPI ID format');
+                }
+                
+                // Simulate velocity check
+                if (transaction.amount > 30000) {
+                    riskScore += 20;
+                    riskFactors.push('High-value UPI transaction');
+                    alerts.push({
+                        type: 'HIGH_VALUE_UPI',
+                        severity: 'MEDIUM',
+                        message: 'UPI transaction above typical limits'
+                    });
+                }
+            }
+
+            // ML Model simulation
+            const mlFraudProbability = Math.min(0.95, riskScore / 100 + Math.random() * 0.2);
+            
+            // Determine risk level
+            let riskLevel = 'LOW';
+            let recommendedAction = 'ALLOW';
+            
+            if (riskScore >= 60) {
+                riskLevel = 'HIGH';
+                recommendedAction = 'BLOCK_TRANSACTION';
+            } else if (riskScore >= 30) {
+                riskLevel = 'MEDIUM';
+                recommendedAction = 'REQUEST_OTP_VERIFICATION';
+            }
+
+            return {
+                transaction_id: transaction.transaction_id,
+                user_id: transaction.user_id,
+                amount: transaction.amount,
+                payment_method: transaction.payment_method,
+                risk_score: riskScore,
+                risk_level: riskLevel,
+                risk_factors: riskFactors,
+                alerts: alerts,
+                ml_fraud_probability: mlFraudProbability,
+                recommended_action: recommendedAction,
+                requires_manual_review: riskScore >= 50,
+                regulatory_flags: {
+                    rbi_reporting_required: transaction.amount >= 50000,
+                    aml_concern: riskScore >= 70,
+                    kyc_reverification_needed: riskScore >= 60
+                },
+                processing_time: Math.floor(Math.random() * 100) + 20 + 'ms'
+            };
+        }
+
+        function displayResults(analysis) {
+            const results = document.getElementById('results');
+            
+            const alertClass = analysis.risk_level === 'HIGH' ? 'alert-high' : 
+                              analysis.risk_level === 'MEDIUM' ? 'alert-medium' : 'alert-low';
+            
+            const statusIcon = analysis.risk_level === 'HIGH' ? '🚨' : 
+                              analysis.risk_level === 'MEDIUM' ? '⚠️' : '✅';
+            
+            const actionText = analysis.recommended_action === 'BLOCK_TRANSACTION' ? 'Transaction Blocked' :
+                              analysis.recommended_action === 'REQUEST_OTP_VERIFICATION' ? 'OTP Required' :
+                              'Transaction Approved';
+
+            results.innerHTML = `
+                <div class="alert ${alertClass}">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <strong>${statusIcon} ${actionText}</strong>
+                        <span>Risk Level: ${analysis.risk_level}</span>
+                    </div>
+                    
+                    <div class="risk-score" style="color: ${analysis.risk_level === 'HIGH' ? '#dc3545' : analysis.risk_level === 'MEDIUM' ? '#ffc107' : '#28a745'}">
+                        Risk Score: ${analysis.risk_score}/100
+                    </div>
+                    
+                    <div><strong>ML Fraud Probability:</strong> ${(analysis.ml_fraud_probability * 100).toFixed(1)}%</div>
+                    <div><strong>Processing Time:</strong> ${analysis.processing_time}</div>
+                    <div><strong>Transaction ID:</strong> ${analysis.transaction_id}</div>
+                    
+                    ${analysis.risk_factors.length > 0 ? `
+                        <div style="margin-top: 15px;">
+                            <strong>Risk Factors Detected:</strong>
+                            <ul class="risk-factors">
+                                ${analysis.risk_factors.map(factor => `<li>${factor}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                    
+                    ${analysis.alerts.length > 0 ? `
+                        <div style="margin-top: 15px;">
+                            <strong>System Alerts:</strong>
+                            ${analysis.alerts.map(alert => `
+                                <div style="margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.05); border-radius: 4px;">
+                                    <strong>[${alert.severity}]</strong> ${alert.message}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(0,0,0,0.1);">
+                        <strong>🇮🇳 Regulatory Compliance:</strong>
+                        <div style="margin-top: 8px;">
+                            <span style="margin-right: 15px;">📊 RBI Reporting: ${analysis.regulatory_flags.rbi_reporting_required ? '✅ Required' : '❌ Not Required'}</span>
+                            <span style="margin-right: 15px;">🔍 AML Review: ${analysis.regulatory_flags.aml_concern ? '⚠️ Flagged' : '✅ Clear'}</span>
+                            <span>🆔 KYC Status: ${analysis.regulatory_flags.kyc_reverification_needed ? '🔴 Reverify' : '✅ Valid'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateStats() {
+            // Simulate real-time stats updates
+            const totalEl = document.getElementById('totalTransactions');
+            const fraudEl = document.getElementById('fraudDetected');
+            const responseTimeEl = document.getElementById('avgResponseTime');
+            
+            totalEl.textContent = parseInt(totalEl.textContent) + 1;
+            
+            if (Math.random() > 0.9) {
+                fraudEl.textContent = parseInt(fraudEl.textContent) + 1;
+            }
+            
+            responseTimeEl.textContent = Math.floor(Math.random() * 80) + 20 + 'ms';
+        }
+
+        // Simulate live transaction monitoring
+        function simulateLiveTransactions() {
+            setInterval(() => {
+                if (Math.random() > 0.7) { // 30% chance every 3 seconds
+                    updateStats();
+                }
+            }, 3000);
+        }
+
+        // Add some preset demo scenarios
+        function loadDemoScenario(scenario) {
+            switch(scenario) {
+                case 'high-risk':
+                    document.getElementById('amount').value = 95000;
+                    document.getElementById('merchantCategory').value = 'Jewelry';
+                    document.getElementById('location').value = 'Delhi, NCR';
+                    break;
+                case 'normal':
+                    document.getElementById('amount').value = 1500;
+                    document.getElementById('merchantCategory').value = 'Food';
+                    document.getElementById('location').value = 'Mumbai, Maharashtra';
+                    break;
+            }
+        }
+
+        // Initialize live simulation
+        simulateLiveTransactions();
+
+        // Add demo buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('.transaction-form');
+            const demoButtons = document.createElement('div');
+            demoButtons.style.cssText = 'display: flex; gap: 10px; margin-bottom: 15px;';
+            demoButtons.innerHTML = `
+                <button type="button" onclick="loadDemoScenario('high-risk')" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #fff3cd; cursor: pointer;">
+                    🚨 High Risk Demo
+                </button>
+                <button type="button" onclick="loadDemoScenario('normal')" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; background: #d4edda; cursor: pointer;">
+                    ✅ Normal Transaction
+                </button>
+            `;
+            form.insertBefore(demoButtons, form.firstChild);
+        });
+    </script>
+</body>
+</html>
