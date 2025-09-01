@@ -7,3 +7,4 @@ Here are some AI Agent workflows I've built so far:
 2. Daily Cricket newsletter - from Cricbuzz
 3. Daily Music Newletter - from Loudwire / Rockfeed
 4. Zerodha Stock Holdings analysis + recommendation engine
+5. Basic Text to Speech Project (using Elevenlabs)
