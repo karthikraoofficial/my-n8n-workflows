@@ -1,0 +1,317 @@
+{
+  "name": "Banking_Loan Eligibility to Non-Bureau Customers",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "19e41d7f-df3c-4027-b7ba-ba608cf74c0d",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -64,
+        368
+      ],
+      "id": "7c5c9f26-3eda-4409-8a1b-ba2d6b3cb02b",
+      "name": "Webhook",
+      "webhookId": "19e41d7f-df3c-4027-b7ba-ba608cf74c0d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the input data from the Webhook\nconst inputData = $input.all()[0].json;\n\n// 2. Extract the actual data from the body property\nconst webhookBody = inputData.body;\n\n// 3. Check if the expected data exists\nif (!webhookBody || !webhookBody.applicant_data || !webhookBody.loan_parameters) {\n  throw new Error(\"Invalid input structure. Expected applicant_data and loan_parameters in request body.\");\n}\n\n// 4. Extract data from the correct location\nconst applicant = webhookBody.applicant_data;\nconst loan = webhookBody.loan_parameters;\n\n// 5. Assign values with fallbacks\nconst monthlyIncome = applicant.monthly_income || 0;\nconst monthlyExpenses = applicant.monthly_expenses || 0;\nconst existingEmis = applicant.existing_emis || 0;\nconst savingsBalance = applicant.savings_balance || 0;\nconst principal = loan.amount_required || 0;\nconst time = loan.desired_tenure_months || 24;\n\n// 6. Perform Calculations\n// Calculate Disposable Income\nconst disposableIncome = monthlyIncome - monthlyExpenses;\n\n// Calculate Proposed EMI (using compound interest formula)\nconst annualInterestRate = 0.15; // Assume 15% annual interest\nconst monthlyInterestRate = annualInterestRate / 12;\nconst emi = (principal * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, time)) / \n            (Math.pow(1 + monthlyInterestRate, time) - 1) || 0;\n\n// Calculate Critical Ratios\nconst totalObligations = emi + existingEmis;\nconst emiToIncomeRatio = monthlyIncome > 0 ? (totalObligations / monthlyIncome) * 100 : 0;\nconst savingsToLoanRatio = principal > 0 ? (savingsBalance / principal) * 100 : 0;\n\n// 7. Prepare a CLEAN output specifically for the Gemini LLM\nreturn [\n  {\n    json: {\n      // Only include the data the Gemini prompt needs - no webhook metadata\n      applicant_data: {\n        full_name: applicant.full_name, // ← ADD THIS LINE\n        monthly_income: monthlyIncome,\n        monthly_expenses: monthlyExpenses,\n        existing_emis: existingEmis,\n        savings_balance: savingsBalance,\n        phone_tenure_months: applicant.phone_tenure_months,\n        employment_tenure_months: applicant.employment_tenure_months,\n        bill_payment_consistency: applicant.bill_payment_consistency,\n        nsf_count_6m: applicant.nsf_count_6m,\n        digital_footprint_score: applicant.digital_footprint_score\n      },\n      loan_parameters: {\n        amount_required: principal,\n        desired_tenure_months: time\n      },\n      calculated_metrics: {\n        disposable_income: disposableIncome,\n        proposed_emi: emi,\n        emi_to_income_ratio: emiToIncomeRatio,\n        savings_to_loan_ratio: savingsToLoanRatio\n      }\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        368
+      ],
+      "id": "62a4f35f-36a2-4768-ad47-e73df43bacb3",
+      "name": "Code - Ratios calc"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={\n  \"task\": \"Perform a risk assessment based on the following applicant and loan data.\",\n  \"applicant_profile\": {\n    \"full_name\": \"{{ $json.applicant_data.full_name }}\",\n    \"monthly_income_inr\": {{ $json.applicant_data.monthly_income }},\n    \"monthly_expenses_inr\": {{ $json.applicant_data.monthly_expenses }},\n    \"existing_emis_inr\": {{ $json.applicant_data.existing_emis }},\n    \"savings_balance_inr\": {{ $json.applicant_data.savings_balance }},\n    \"phone_tenure_months\": {{ $json.applicant_data.phone_tenure_months }},\n    \"employment_tenure_months\": {{ $json.applicant_data.employment_tenure_months }},\n    \"bill_payment_consistency\": \"{{ $json.applicant_data.bill_payment_consistency }}\",\n    \"nsf_count_6m\": {{ $json.applicant_data.nsf_count_6m }},\n    \"digital_footprint_score\": {{ $json.applicant_data.digital_footprint_score }}\n  },\n  \"loan_request\": {\n    \"amount_required_inr\": {{ $json.loan_parameters.amount_required }},\n    \"desired_tenure_months\": {{ $json.loan_parameters.desired_tenure_months }}\n  },\n  \"calculated_metrics\": {\n    \"disposable_income_inr\": {{ $json.calculated_metrics.disposable_income }},\n    \"proposed_emi_inr\": {{ $json.calculated_metrics.proposed_emi }},\n    \"emi_to_income_ratio_percent\": {{ $json.calculated_metrics.emi_to_income_ratio }},\n    \"savings_to_loan_ratio_percent\": {{ $json.calculated_metrics.savings_to_loan_ratio }}\n  }\n}",
+        "options": {
+          "systemMessage": "**Role:** You are an expert Risk Assessment Officer for a digital lending company in India. Your sole task is to evaluate loan applications for customers with no formal credit history (no CIBIL score).\n\n**Core Instructions:**\n1.  Analyze all provided applicant data and calculated financial metrics.\n2.  Synthesize the information to assess the customer's risk profile based on the pillars of Affordability, Stability (tenure), Financial Discipline (NSF, bill payments), and Digital Intent.\n3.  Generate a final \"risk_score\" between 300 and 850, where a higher score indicates a lower risk.\n4.  Make a clear, final decision: \"APPROVE\", \"MANUAL_REVIEW\", or \"DECLINE\".\n5.  Provide a concise, professional \"rationale\" for your decision.\n\n**CRITICAL FORMATTING RULE:**\n- YOUR ENTIRE RESPONSE MUST BE **ONLY** A JSON OBJECT.\n- DO NOT include any introductory, explanatory, or concluding text before or after the JSON.\n- Wrap your final output in a markdown code block labeled 'json'.\n\nBased strictly on the data, output your assessment as a valid JSON object with the exact following keys: 'risk_score', 'decision', 'rationale'."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        592,
+        368
+      ],
+      "id": "cbe30841-923b-4f19-9ffa-28fb6edb91ef",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        672,
+        592
+      ],
+      "id": "6eee22d3-392d-4f96-8cc6-bd4ccecc4ab6",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "wxmIQLDXfnxzDrgH",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Get the input data from the LLM node\nconst inputData = $input.all();\n\n// Check if we have any data at all\nif (!inputData || inputData.length === 0) {\n  throw new Error(\"No data received from the previous node.\");\n}\n\n// 2. Extract the LLM's response text correctly\n// The property is likely called 'output', not 'response'\nlet llmResponse = inputData[0].json.output; // Use 'let' instead of 'const' so we can reassign it\n\n// Check if the response exists\nif (!llmResponse) {\n  // If 'output' is empty, try other possible property names as a fallback\n  if (inputData[0].json.response) {\n    llmResponse = inputData[0].json.response; // Just reassign, don't redeclare with 'var'\n  } else if (inputData[0].json.text) {\n    llmResponse = inputData[0].json.text; // Just reassign, don't redeclare with 'var'\n  } else {\n    // If no common property is found, throw an error with the entire input for debugging\n    throw new Error(\"Could not find LLM response text in 'output', 'response', or 'text' properties. Input was: \" + JSON.stringify(inputData[0].json, null, 2));\n  }\n}\n\n// 3. Use a robust regex to find content within markdown JSON code blocks\nconst jsonMatch = llmResponse.match(/```json\\s*([\\s\\S]*?)\\s*```/);\n\nif (jsonMatch && jsonMatch[1]) {\n    // If found a code block, try to parse the content inside it\n    try {\n        const parsedDecision = JSON.parse(jsonMatch[1].trim());\n        return [ { json: parsedDecision } ];\n    } catch (e) {\n        // If parsing the code block content fails, try to find any JSON in the string\n        const fallbackMatch = llmResponse.match(/\\{[\\s\\S]*\\}/);\n        if (fallbackMatch) {\n            try {\n                const parsedDecision = JSON.parse(fallbackMatch[0]);\n                return [ { json: parsedDecision } ];\n            } catch (e) {\n                return [ { json: { error: \"Failed to parse any JSON in LLM response\", raw_response: llmResponse } } ];\n            }\n        }\n        return [ { json: { error: \"Found code block but failed to parse contents\", raw_response: llmResponse } } ];\n    }\n} else {\n    // If no code blocks found, try to find any JSON object in the response\n    const fallbackMatch = llmResponse.match(/\\{[\\s\\S]*\\}/);\n    if (fallbackMatch) {\n        try {\n            const parsedDecision = JSON.parse(fallbackMatch[0]);\n            return [ { json: parsedDecision } ];\n        } catch (e) {\n            return [ { json: { error: \"No valid JSON found in LLM response\", raw_response: llmResponse } } ];\n        }\n    }\n    return [ { json: { error: \"No JSON or code block found in response\", raw_response: llmResponse } } ];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        368
+      ],
+      "id": "ad1788e1-77cc-463a-b294-8ca8346cc309",
+      "name": "Code - output json parser"
+    },
+    {
+      "parameters": {
+        "formTitle": "Loan Eligibility Calculator",
+        "formDescription": "We'll calculate your loan eligibility based in your inputs",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Monthly Income (₹)",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Monthly Expenses (₹)",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Existing EMIs (₹)",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Savings Balance (₹)",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Desired Loan Amount (₹)",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Desired Loan Tenure (months)",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone Number Tenure (months)",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Employment Tenure (months)",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Bill Payment Consistency",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "High"
+                  },
+                  {
+                    "option": "Medium"
+                  },
+                  {
+                    "option": "Low"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        -368,
+        144
+      ],
+      "id": "e35bdf30-2e32-4d60-af8c-6230beeece40",
+      "name": "On form submission - Obtain candidate's financials",
+      "webhookId": "ad8f4efa-0d51-47ee-ac17-e4b55441ae7d",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Thank you for your application",
+        "completionMessage": "={{ $input.first().json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.3,
+      "position": [
+        -64,
+        32
+      ],
+      "id": "2c69d042-f440-46e3-bc0c-f9397da0fd1e",
+      "name": "Form - completion",
+      "webhookId": "29bb68b1-208d-4a3f-b018-f87695574646"
+    },
+    {
+      "parameters": {
+        "jsCode": "const decisionData = $input.first().json;\nconst { risk_score, decision, rationale } = decisionData;\n\nconst message = `\n🤖 *AI-Powered Loan Assessment Complete*\n\n---\n*🎯 Final Decision:*\n*${decision}*\n\n*📊 Your Risk Score:*\n*${risk_score}/850*\n\n---\n*💡 Explanation:*\n${rationale}\n\n_Thank you for your application._\n`;\n\nreturn [{ json: { message, ...decisionData } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        368
+      ],
+      "id": "5a0adc75-8c42-4374-aa2b-aee36dba56cd",
+      "name": "Code - form compatible output"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Loan Application Decision</title>\n    <style>\n        body {\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            line-height: 1.6;\n            color: #333;\n            max-width: 800px;\n            margin: 0 auto;\n            padding: 20px;\n            background-color: #f5f5f5;\n        }\n        .container {\n            background: white;\n            border-radius: 10px;\n            padding: 30px;\n            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);\n        }\n        .header {\n            text-align: center;\n            margin-bottom: 30px;\n            color: #2c3e50;\n        }\n        .ai-icon {\n            font-size: 2em;\n            margin-bottom: 10px;\n        }\n        .decision-box {\n            padding: 20px;\n            border-radius: 8px;\n            margin: 20px 0;\n            text-align: center;\n        }\n        .approved {\n            background-color: #d4edda;\n            border: 2px solid #c3e6cb;\n            color: #155724;\n        }\n        .declined {\n            background-color: #f8d7da;\n            border: 2px solid #f5c6cb;\n            color: #721c24;\n        }\n        .review {\n            background-color: #fff3cd;\n            border: 2px solid #ffeaa7;\n            color: #856404;\n        }\n        .rationale {\n            background: #e9ecef;\n            padding: 20px;\n            border-radius: 8px;\n            margin: 20px 0;\n            white-space: pre-wrap;\n        }\n        .footer {\n            text-align: center;\n            margin-top: 30px;\n            color: #6c757d;\n            font-size: 0.9em;\n        }\n        .message-content {\n            white-space: pre-wrap;\n            line-height: 1.8;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <div class=\"header\">\n            <div class=\"ai-icon\">🤖</div>\n            <h1>AI-Powered Loan Assessment</h1>\n            <p>Application processed on <script>document.write(new Date().toLocaleString());</script></p>\n        </div>\n\n        <div class=\"decision-box {{ $json.decision|lower }}\">\n            <h2>Final Decision: {{ $json.decision }}</h2>\n            <p>Risk Score: {{ $json.risk_score }}/850</p>\n        </div>\n\n        <div class=\"rationale\">\n            <h3>📋 Detailed Assessment</h3>\n            <div class=\"message-content\">{{ $json.message }}</div>\n        </div>\n\n        <div class=\"footer\">\n            <p>Powered by AI Risk Assessment System • Processed in real-time</p>\n            <p>Reference ID: {{ $json.risk_score }}</p>\n        </div>\n    </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1392,
+        368
+      ],
+      "id": "0333785f-bdf1-428d-a365-a58a519bae87",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Return the exact input structure to see what the webhook sends\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        368
+      ],
+      "id": "4e9fb70e-31b0-4034-82ab-fac363ffaa4a",
+      "name": "Code"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Ratios calc": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code - output json parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission - Obtain candidate's financials": {
+      "main": [
+        []
+      ]
+    },
+    "Code - output json parser": {
+      "main": [
+        [
+          {
+            "node": "Code - form compatible output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - form compatible output": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Code - Ratios calc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3f7a1445-a138-4f44-802d-12df257b6474",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c51495c471c573104351d94e8edb118acd1e3f30ad3f94b6f8748425fe7f801d"
+  },
+  "id": "DSw8b0vE5AnfL3lM",
+  "tags": []
+}
