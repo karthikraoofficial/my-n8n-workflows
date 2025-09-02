@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Eligibility Evaluator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden p-8 transition-all duration-300">
+        <!-- Header Section -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">Loan Eligibility Evaluator</h1>
+            <p class="text-gray-500 text-sm sm:text-base">
+                Input the applicant's details to calculate their risk score and loan eligibility.
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Input Form Section -->
+            <div class="p-6 bg-gray-50 rounded-xl">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6">Applicant Parameters</h2>
+                <form id="loan-form" class="space-y-6">
+                    <div>
+                        <label for="savings" class="block text-sm font-medium text-gray-700">Avg. Monthly Savings (₹)</label>
+                        <input type="number" id="savings" name="savings" value="12500" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="stability" class="block text-sm font-medium text-gray-700">Income Stability (σ in ₹)</label>
+                        <input type="number" id="stability" name="stability" value="4200" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="expense_ratio" class="block text-sm font-medium text-gray-700">Essential Expense Ratio</label>
+                        <input type="number" step="0.01" id="expense_ratio" name="expense_ratio" value="0.65" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="phone_tenure" class="block text-sm font-medium text-gray-700">Phone Tenure (Months)</label>
+                        <input type="number" id="phone_tenure" name="phone_tenure" value="28" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="bill_rate" class="block text-sm font-medium text-gray-700">Bill Payment Rate</label>
+                        <input type="number" step="0.01" id="bill_rate" name="bill_rate" value="0.92" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="employment_tenure" class="block text-sm font-medium text-gray-700">Employment Tenure (Mths)</label>
+                        <input type="number" id="employment_tenure" name="employment_tenure" value="18" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <div>
+                        <label for="nsf_count" class="block text-sm font-medium text-gray-700">NSF Count (Last 6M)</label>
+                        <input type="number" id="nsf_count" name="nsf_count" value="1" class="mt-1 block w-full px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                    </div>
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200">
+                        Calculate Eligibility
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Results Section -->
+            <div id="results" class="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-xl space-y-4">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-2">Evaluation Results</h2>
+                
+                <div class="flex flex-col items-center p-6 bg-white rounded-lg shadow-md w-full max-w-sm">
+                    <p class="text-sm font-medium text-gray-500">Final Risk Score</p>
+                    <div id="score-display" class="text-5xl font-extrabold text-blue-600 mt-2 transition-all duration-300 ease-in-out">
+                        ---
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center p-6 bg-white rounded-lg shadow-md w-full max-w-sm">
+                    <p class="text-sm font-medium text-gray-500">Decision</p>
+                    <div id="decision-display" class="text-2xl font-bold mt-2 text-gray-800">
+                        ---
+                    </div>
+                </div>
+                
+                <div class="flex flex-col items-center p-6 bg-white rounded-lg shadow-md w-full max-w-sm">
+                    <p class="text-sm font-medium text-gray-500">Risk Band</p>
+                    <div id="risk-band-display" class="text-2xl font-bold mt-2 text-gray-800">
+                        ---
+                    </div>
+                </div>
+
+                <!-- Custom Modal for Alerts -->
+                <div id="alert-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm text-center">
+                        <p id="alert-message" class="text-lg font-semibold text-gray-800"></p>
+                        <button onclick="closeAlert()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200">
+                            OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data for risk calculation, derived from the provided CSV files
+        const PARAMETERS = [
+            { id: 'savings', label: 'Avg. Monthly Savings (₹)', weight: 0.25, thresholds: [
+                { value: 15000, score: 800, op: '>' },
+                { value: 5000, score: 500, op: '>=' },
+                { value: 0, score: 200, op: '>=' }
+            ]},
+            { id: 'stability', label: 'Income Stability (σ in ₹)', weight: 0.15, thresholds: [
+                { value: 0, score: 800, op: '<' },
+                { value: 5000, score: 450, op: '<' },
+                { value: 10000, score: 200, op: '<=' }
+            ]},
+            { id: 'expense_ratio', label: 'Essential Expense Ratio', weight: 0.1, thresholds: [
+                { value: 0.5, score: 750, op: '<' },
+                { value: 0.7, score: 500, op: '<=' },
+                { value: 1, score: 250, op: '<=' }
+            ]},
+            { id: 'phone_tenure', label: 'Phone Tenure (Months)', weight: 0.1, thresholds: [
+                { value: 36, score: 800, op: '>=' },
+                { value: 12, score: 550, op: '>=' },
+                { value: 0, score: 300, op: '>=' }
+            ]},
+            { id: 'bill_rate', label: 'Bill Payment Rate', weight: 0.15, thresholds: [
+                { value: 0.95, score: 850, op: '>=' },
+                { value: 0.8, score: 600, op: '>=' },
+                { value: 0, score: 200, op: '>=' }
+            ]},
+            { id: 'employment_tenure', label: 'Employment Tenure (Mths)', weight: 0.15, thresholds: [
+                { value: 24, score: 850, op: '>=' },
+                { value: 12, score: 650, op: '>=' },
+                { value: 0, score: 250, op: '>=' }
+            ]},
+            { id: 'nsf_count', label: 'NSF Count (Last 6M)', weight: 0.1, thresholds: [
+                { value: 0, score: 800, op: '<=' },
+                { value: 2, score: 500, op: '<=' },
+                { value: 4, score: 200, op: '<=' }
+            ]}
+        ];
+        
+        // Helper function to show a custom alert modal
+        function showAlert(message) {
+            const modal = document.getElementById('alert-modal');
+            const msgElement = document.getElementById('alert-message');
+            msgElement.textContent = message;
+            modal.classList.remove('hidden');
+        }
+
+        // Helper function to close the custom alert modal
+        function closeAlert() {
+            const modal = document.getElementById('alert-modal');
+            modal.classList.add('hidden');
+        }
+
+        // Main calculation function
+        function calculateRiskScore(event) {
+            event.preventDefault();
+
+            let totalScore = 0;
+            const form = document.getElementById('loan-form');
+            const formData = new FormData(form);
+
+            try {
+                PARAMETERS.forEach(param => {
+                    const inputValue = parseFloat(formData.get(param.id));
+                    
+                    // Basic input validation
+                    if (isNaN(inputValue)) {
+                        showAlert(`Please enter a valid number for ${param.label}.`);
+                        throw new Error("Invalid input"); // Stop further execution
+                    }
+
+                    // Find the sub-score based on the thresholds
+                    let subScore = 0;
+                    for (const threshold of param.thresholds) {
+                        let condition = false;
+                        switch (threshold.op) {
+                            case '>':
+                                condition = inputValue > threshold.value;
+                                break;
+                            case '>=':
+                                condition = inputValue >= threshold.value;
+                                break;
+                            case '<':
+                                condition = inputValue < threshold.value;
+                                break;
+                            case '<=':
+                                condition = inputValue <= threshold.value;
+                                break;
+                        }
+                        if (condition) {
+                            subScore = threshold.score;
+                            break; // Stop once a condition is met
+                        }
+                    }
+                    
+                    // Add to total score (weighted)
+                    totalScore += subScore * param.weight;
+                });
+
+                // Round the final score to a whole number
+                const finalScore = Math.round(totalScore);
+
+                // Determine Decision and Risk Band based on the score
+                let decision, riskBand, scoreColor;
+
+                if (finalScore >= 700) {
+                    decision = "APPROVE";
+                    scoreColor = 'text-green-600';
+                } else if (finalScore >= 600) {
+                    decision = "MANUAL REVIEW";
+                    scoreColor = 'text-yellow-600';
+                } else {
+                    decision = "DECLINE";
+                    scoreColor = 'text-red-600';
+                }
+
+                if (finalScore >= 750) {
+                    riskBand = "Low Risk";
+                } else if (finalScore >= 600) {
+                    riskBand = "Medium Risk";
+                } else {
+                    riskBand = "High Risk";
+                }
+
+                // Update the UI with results
+                const scoreDisplay = document.getElementById('score-display');
+                scoreDisplay.textContent = finalScore;
+                scoreDisplay.className = `text-5xl font-extrabold mt-2 transition-all duration-300 ease-in-out ${scoreColor}`;
+                document.getElementById('decision-display').textContent = decision;
+                document.getElementById('risk-band-display').textContent = riskBand;
+                
+            } catch (error) {
+                console.error("Calculation failed:", error);
+            }
+        }
+
+        // Attach event listener to the form
+        document.getElementById('loan-form').addEventListener('submit', calculateRiskScore);
+        
+    </script>
+
+</body>
+</html>
